@@ -1,17 +1,55 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ShortenForm from "./shorten-form";
 import UrlLists from "./url-lists";
-export default function UrlShortenerContainer() {
-  const [refreshKey, setRefreshKey] = useState(0);
+import {
+  addStoredUrl,
+  getStoredUrls,
+  syncStoredUrlVisits,
+  type StoredUrl,
+} from "@/lib/url-history";
 
-  const handleUrlShortened = () => {
-    setRefreshKey((prev) => prev + 1);
+export default function UrlShortenerContainer() {
+  const [urls, setUrls] = useState<StoredUrl[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const stored = getStoredUrls();
+    setUrls(stored);
+
+    if (stored.length === 0) {
+      setIsLoading(false);
+      return;
+    }
+
+    const refreshVisits = async () => {
+      try {
+        const codes = stored.map((url) => url.shortCode).join(",");
+        const response = await fetch(`/api/urls?codes=${encodeURIComponent(codes)}`);
+        if (!response.ok) return;
+
+        const data = (await response.json()) as StoredUrl[];
+        if (!Array.isArray(data) || data.length === 0) return;
+
+        setUrls(syncStoredUrlVisits(data));
+      } catch (error) {
+        console.error("Error refreshing URL visits", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void refreshVisits();
+  }, []);
+
+  const handleUrlShortened = (url: StoredUrl) => {
+    setUrls(addStoredUrl(url));
   };
-return (
+
+  return (
     <div>
-      <ShortenForm handleUrlShortened={handleUrlShortened} />
-      <UrlLists key={refreshKey} />
+      <ShortenForm onUrlShortened={handleUrlShortened} />
+      <UrlLists urls={urls} isLoading={isLoading} />
     </div>
   );
 }

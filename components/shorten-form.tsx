@@ -2,33 +2,41 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import type { StoredUrl } from "@/lib/url-history";
 
 interface ShortenFormProps {
-  handleUrlShortened: () => void;
+  onUrlShortened: (url: StoredUrl) => void;
 }
-export default function ShortenForm({ handleUrlShortened }: ShortenFormProps) {
+
+export default function ShortenForm({ onUrlShortened }: ShortenFormProps) {
   const [url, setUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsLoading(true);
-    console.log(url);
+
     try {
       const response = await fetch("/api/shorten", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      await response.json();
+
+      if (!response.ok) {
+        throw new Error("Failed to shorten URL");
+      }
+
+      const data = (await response.json()) as StoredUrl;
       setUrl("");
-      handleUrlShortened();
+      onUrlShortened(data);
     } catch (error) {
       console.log("Error shortening Url", error);
     } finally {
       setIsLoading(false);
     }
   };
+
   return (
     <form onSubmit={handleSubmit} className="mb-4">
       <div className="space-y-4">

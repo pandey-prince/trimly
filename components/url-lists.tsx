@@ -1,33 +1,24 @@
 "use client";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Check, CopyIcon, EyeIcon, Ghost, icons } from "lucide-react";
-import { useEffect, useState } from "react";
-import { url } from "inspector";
-type Url = { id: string; shortCode: string; originUrl: string; visits: number };
-export default function UrlLists() {
-  const [urls, setUrls] = useState<Url[]>([]);
-  const [copied, setCopied] = useState<boolean>(false);
-  const [copyUrl, setCopyUrl] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+import { Check, CopyIcon, EyeIcon } from "lucide-react";
+import { useState } from "react";
+import type { StoredUrl } from "@/lib/url-history";
+
+type UrlListsProps = {
+  urls: StoredUrl[];
+  isLoading: boolean;
+};
+
+export default function UrlLists({ urls, isLoading }: UrlListsProps) {
+  const [copied, setCopied] = useState(false);
+  const [copyUrl, setCopyUrl] = useState("");
+
   const shortenrUrl = (code: string) =>
     `${process.env.NEXT_PUBLIC_BASE_URL}/${code}`;
-  console.log(urls);
-  const fetchUrls = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/urls");
-      const data = await response.json();
-      setUrls(data);
-    } catch (error) {
-      console.error("Error fetching URLs", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleCopyUrl = (code: string) => {
-    const fullUrl = `${shortenrUrl(code)}`;
+    const fullUrl = shortenrUrl(code);
     navigator.clipboard.writeText(fullUrl).then(() => {
       setCopied(true);
       setCopyUrl(code);
@@ -37,10 +28,6 @@ export default function UrlLists() {
       }, 3000);
     });
   };
-
-  useEffect(() => {
-    fetchUrls();
-  }, []);
 
   if (isLoading) {
     return (
@@ -69,10 +56,21 @@ export default function UrlLists() {
       </div>
     );
   }
-  
+
+  if (urls.length === 0) {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Your URLs</h2>
+        <p className="text-muted-foreground text-sm">
+          Links you shorten will show up here on this device.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-2">Recent URLs</h2>
+      <h2 className="text-2xl font-bold mb-2">Your URLs</h2>
       <ul className="space-y-2">
         {urls.map((url) => (
           <li
